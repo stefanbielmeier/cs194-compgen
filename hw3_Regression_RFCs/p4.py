@@ -1,6 +1,11 @@
 import numpy as np
 from sklearn.svm import SVC
 
+"""
+Problem 4 – Training a Support Vector Machine and Cross-Validation
+"""
+
+
 DATA_CSV = "pulsar_data.csv"
 
 def read_data():
