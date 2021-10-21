@@ -1,2 +1,4 @@
-# cs198-computational-genomics
+# cs194-computational-genomics
 Computational methods to explore the (human) genome
+
+CS194-172 covers the computational, statistical and biological background required for students to understand recent research in the field of computational genomics. It also covers computational methods including hidden Markov models, machine learning approaches for classification and regression, convolutional neural networks and their application to genome annotation, genome-wide association studies, and predicting the molecular and clinical consequences of genetic variation. We will also cover relevant biological background on genome structure and function, epigenomics, and gene expression regulation. At the end of the class, students should feel comfortable reading research papers and understanding important open research questions in computational genomics.
