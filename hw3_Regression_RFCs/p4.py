@@ -89,10 +89,7 @@ def cross_validation(X_train, Y_train, k = 5, classifier='linear', C = 1):
 	mean_acc = sum_acc / k
 	return mean_acc
 
-
-def main():
-	X_train, Y_train, X_test, Y_test = read_data()
-
+def cross_validate_all():
 	start = time.time()
 	for i in range(5):
 		print("acc for poly2 for C={}".format(0.1*(10**i)), cross_validation(X_train, Y_train, k=5, classifier='linear', C=0.1*(10**i)))	
@@ -116,17 +113,25 @@ def main():
 		print("acc for linear for C={}".format(0.1*(10**i)), cross_validation(X_train, Y_train, k=5, classifier='linear', C=0.1*(10**i)))
 	end = time.time()
 	print("cross-validation took {}".format(round(end-start, 1)), "secs")
+
+def report_test_acc(classifiers, X_test, Y_test):
+	for classifier in classifiers:
+		correct_pred = np.equal(classifier.predict(X_test), Y_test)
+		print("accuracy", np.size(correct_pred[correct_pred == True]) / np.size(Y_test))
+
+def main():
+	X_train, Y_train, X_test, Y_test = read_data()
+
+	#cross_validate_all()
 	
-	#train best classifiers
-	linear_classifier = train_linear(X_train, Y_train, C = 1)
-	poly2_classifier = train_poly2(X_train, Y_train, C = 1)
-	poly4_classifier = train_poly5(X_train, Y_train, C = 1)
-	rbf_classifier = train_rbf(X_train, Y_train, C = 1)
-	mean_acc = cross_validation(X_train, Y_train)
+	#train best classifiers (which interestingly is super fast compared to incorrect C values)
+	linear_classifier = train_linear(X_train, Y_train, C = 0.1)
+	poly2_classifier = train_poly2(X_train, Y_train, C = 0.1)
+	poly5_classifier = train_poly5(X_train, Y_train, C = 1000)
+	rbf_classifier = train_rbf(X_train, Y_train, C = 1000)
 
 	#report test acc of best classifiers
-
-	pass
+	report_test_acc([linear_classifier, poly2_classifier, poly5_classifier, rbf_classifier], X_test, Y_test)
 
 if __name__ == '__main__':
 	main()
