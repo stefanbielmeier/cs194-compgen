@@ -63,7 +63,6 @@ def cross_validation(X_train, Y_train, k = 5, classifier='linear', C = 1):
 	Arguments: a randomized training dataset of X_values and Y_values that correspond to each other, and k which is the k-folds of the crossvalidation
 	Returns: mean accuracy over all k-folds after training
 	"""
-	start = time.time()
 	sum_acc = 0
 	k_size = int(X_train.shape[0] / k)
 
@@ -88,27 +87,35 @@ def cross_validation(X_train, Y_train, k = 5, classifier='linear', C = 1):
 
 	#return mean accuracy across the k folds
 	mean_acc = sum_acc / k
-	end = time.time()
-	print("cross-validation took {}".format(round(end-start, 1)), "secs")
 	return mean_acc
 
 
 def main():
 	X_train, Y_train, X_test, Y_test = read_data()
 
-
+	start = time.time()
 	for i in range(5):
 		print("acc for poly2 for C={}".format(0.1*(10**i)), cross_validation(X_train, Y_train, k=5, classifier='linear', C=0.1*(10**i)))	
+	end = time.time()
+	print("cross-validation took {}".format(round(end-start, 1)), "secs")
 	
+	start = time.time()
 	for i in range(5):
 		print("acc for poly5 for C={}".format(0.1*(10**i)), cross_validation(X_train, Y_train, k=5, classifier='poly5', C=0.1*(10**i)))
+	end = time.time()
+	print("cross-validation took {}".format(round(end-start, 1)), "secs")
 
 	for i in range(5):
+		start = time.time()
 		print("acc for rbf for C={}".format(0.1*(10**i)), cross_validation(X_train, Y_train, k=5, classifier='rbf', C=0.1*(10**i)))	
+	end = time.time()
+	print("cross-validation took {}".format(round(end-start, 1)), "secs")
 
+	start = time.time()
 	for i in range(5):
 		print("acc for linear for C={}".format(0.1*(10**i)), cross_validation(X_train, Y_train, k=5, classifier='linear', C=0.1*(10**i)))
-	
+	end = time.time()
+	print("cross-validation took {}".format(round(end-start, 1)), "secs")
 	
 	#train best classifiers
 	linear_classifier = train_linear(X_train, Y_train, C = 1)
@@ -116,6 +123,8 @@ def main():
 	poly4_classifier = train_poly5(X_train, Y_train, C = 1)
 	rbf_classifier = train_rbf(X_train, Y_train, C = 1)
 	mean_acc = cross_validation(X_train, Y_train)
+
+	#report test acc of best classifiers
 
 	pass
 
