@@ -89,7 +89,7 @@ def cross_validation(X_train, Y_train, k = 5, classifier='linear', C = 1):
 	mean_acc = sum_acc / k
 	return mean_acc
 
-def cross_validate_all():
+def cross_validate_all(X_train, Y_train):
 	start = time.time()
 	for i in range(5):
 		print("acc for poly2 for C={}".format(0.1*(10**i)), cross_validation(X_train, Y_train, k=5, classifier='linear', C=0.1*(10**i)))	
@@ -122,7 +122,7 @@ def report_test_acc(classifiers, X_test, Y_test):
 def main():
 	X_train, Y_train, X_test, Y_test = read_data()
 
-	#cross_validate_all()
+	#cross_validate_all(X_train, Y_train)
 	
 	#train best classifiers (which interestingly is super fast compared to incorrect C values)
 	linear_classifier = train_linear(X_train, Y_train, C = 0.1)
