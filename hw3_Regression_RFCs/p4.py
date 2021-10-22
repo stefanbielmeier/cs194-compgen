@@ -1,6 +1,8 @@
 import numpy as np
 from sklearn.svm import SVC
+from sklearn.metrics import roc_curve, auc
 import time
+import matplotlib.pyplot as plt
 
 """
 Problem 4 – Training a Support Vector Machine and Cross-Validation
@@ -25,22 +27,22 @@ def read_data():
 	return X_train, Y_train, X_test, Y_test
 
 def train_linear(x, y, C = 1):
-	classifier = SVC(C=C, kernel='linear')
+	classifier = SVC(C=C, kernel='linear', probability=True)
 	train = classifier.fit(x, y)
 	return train
 
 def train_poly2(x, y, C = 1):
-	classifier = SVC(C=C, kernel='poly', degree=2)
+	classifier = SVC(C=C, kernel='poly', degree=2, probability=True)
 	train = classifier.fit(x, y)
 	return train
 
 def train_poly5(x, y, C = 1):
-	classifier = SVC(C=C, kernel='poly', degree=5)
+	classifier = SVC(C=C, kernel='poly', degree=5, probability=True)
 	train = classifier.fit(x, y)
 	return train
 
 def train_rbf(x, y, C = 1):
-	classifier = SVC(C=C, kernel='rbf')
+	classifier = SVC(C=C, kernel='rbf', probability=True)
 	train = classifier.fit(x, y)
 	return train
 
@@ -119,6 +121,30 @@ def report_test_acc(classifiers, X_test, Y_test):
 		correct_pred = np.equal(classifier.predict(X_test), Y_test)
 		print("accuracy", np.size(correct_pred[correct_pred == True]) / np.size(Y_test))
 
+def plot_roc_curves(classifiers, labels, X_test, Y_test):
+	#https://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
+	plt.figure()
+	lw = 2
+	num_classifiers = len(classifiers)
+
+	for index in range(num_classifiers):
+		prediction = classifiers[index].predict_proba(X_test)
+		fpr, tpr, _ = roc_curve(Y_test, prediction[:, 1])
+		auc_score = auc(fpr, tpr)
+		color = np.random.rand(3,)
+
+		plt.plot(fpr, tpr, color=color,
+			lw=lw, label='ROC curve for {}'.format(labels[index]) + '(area = %.3f)' % auc_score)
+
+	plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+	plt.xlim([0.0, 1.0])
+	plt.ylim([0.0, 1.05])
+	plt.xlabel('False Positive Rate')
+	plt.ylabel('True Positive Rate')
+	plt.title('Receiver operating characteristic curves for our classifiers')
+	plt.legend(loc="lower right")
+	plt.show()
+
 def main():
 	X_train, Y_train, X_test, Y_test = read_data()
 
@@ -130,8 +156,13 @@ def main():
 	poly5_classifier = train_poly5(X_train, Y_train, C = 1000)
 	rbf_classifier = train_rbf(X_train, Y_train, C = 1000)
 
+	classifiers = [linear_classifier, poly2_classifier, poly5_classifier, rbf_classifier]
 	#report test acc of best classifiers
-	report_test_acc([linear_classifier, poly2_classifier, poly5_classifier, rbf_classifier], X_test, Y_test)
+	report_test_acc(classifiers, X_test, Y_test)
+
+	#plot all ROC curves and print associated AUROC values
+	labels = ['linear', 'polynomial 2', 'polynomial 5', 'RBF']
+	plot_roc_curves(classifiers, labels, X_test, Y_test)
 
 if __name__ == '__main__':
 	main()
