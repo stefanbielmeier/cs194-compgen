@@ -10,6 +10,7 @@ __pycache__/
 
 #way too large file
 hg38.phastCons100way.bw
+clinvar_missense.vcf
 
 # C extensions
 *.so
