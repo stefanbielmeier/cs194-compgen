@@ -8,6 +8,9 @@ __pycache__/
 #mac
 .DS_Store
 
+#way too large file
+hg38.phastCons100way.bw
+
 # C extensions
 *.so
 

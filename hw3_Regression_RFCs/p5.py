@@ -10,6 +10,8 @@ import numpy as np
 from sklearn.svm import SVC
 
 
+#https://hgdownload.cse.ucsc.edu/goldenPath/hg38/phastCons100way/hg38.phastCons100way.bw
+
 def main():
 
 	# TODO: Implement problem 5
