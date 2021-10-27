@@ -117,6 +117,70 @@ def add_rvis_scores(variants, rvis):
     print(scores)
     return np.hstack((variants, scores.reshape((-1,1))))
 
+def plot_hist(feature_matrix):
+
+    y = feature_matrix[:,-2:].astype(float)
+    benign_rvis = np.reshape(y[(np.where(y[:,0] == 0)), 1], (-1,1))
+    path_rvis = np.reshape(y[(np.where(y[:,0] == 1)), 1], (-1,1))
+
+    plt.hist(benign_rvis, 100, label='benign')
+    plt.hist(path_rvis, 100, label='pathogenic')
+    plt.ylabel('score frequency')
+    plt.xlabel('score')
+    plt.legend()
+    plt.title('hist of score')
+    plt.show()
+    
+
+def get_oe(filepath):
+    """
+    takes file path for The o/e (observed/expected) ratio extraction from a text file
+
+    returns dict of key value pairs – key is the gene, and value is the o/e score (oe_lof_upper_rank column – 35th column)
+    """
+
+    dict = {}
+
+    with open(filepath) as file:
+        for line in file:
+            if line[0:4] != "gene":
+                info = line.rstrip().split('\n')[0].split("\t")
+                #position 0: gene
+                #position 32: oe_lof_upper_rank
+                
+                try:
+                    value = float(info[32])
+                except ValueError:
+                    value = info[32]
+                dict[info[0]] = value
+    
+    return dict
+
+def add_oe_scores(variants, oe):
+    """
+    Takes: variant matrix in VCF format, oe scores (dict – key (gene) - value(oe score) pairs)
+    Returns: variant matrix in VCF format with an additional column for each variant that includes the applicable RVIS score
+    """
+    scores = np.zeros((variants.shape[0]))
+
+    for i in range(variants.shape[0]):
+        info = variants[i, 7].split(';')
+        for index in range(len(info)):
+            subinfo = info[index].split("=")
+            if subinfo[0] == "GENES":
+                #case 2: for variants with one RVIS score (direct match)
+                if subinfo[1] in oe:
+                    scores[i] = oe[subinfo[1]]
+                #case 3: for variants with multiple RVIS gene matches: take the average of the RVIS scores (doesn't happen or I misunderstood)
+                #maybe TODO: normalize by variant count, if multiple variants are associated with the same gene
+            
+            #case 1: for variants without RVIS score (no match): assign half-value of 50
+            else:
+                scores[i] = 0
+    
+    return np.hstack((variants, scores.reshape((-1,1))))
+
+
 def main():
 
     num_benign, num_pathg, variants = filter_clinVar('clinvar_missense.vcf')
@@ -127,24 +191,16 @@ def main():
     #get last column of val / train (benign / pathogenic), get True / False Array, get values of val / train's last column that matching T/F array, get those dimensions!
     #print("val benign and path", np.shape(val[(np.where(val[:,-1] == '0')), -1])[1], np.shape(val[(np.where(val[:,-1] == '1')), -1])[1])
     #print("train benign and path", np.shape(train[(np.where(train[:,-1] == '0')), -1])[1], np.shape(train[(np.where(train[:,-1] == '1')), -1])[1])
-    rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
-    feature1 = add_rvis_scores(variants, rvis)
+    #rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
+    #feature1 = add_rvis_scores(variants, rvis)
+    
+    #plot_hist(feature1)
 
-    print(rvis)
-    y = feature1[:,-2:].astype(float)
-    print(y[0:100,:])
-    benign_rvis = np.reshape(y[(np.where(y[:,0] == 0)), 1], (-1,1))
-    path_rvis = np.reshape(y[(np.where(y[:,0] == 1)), 1], (-1,1))
+    oe = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
 
-    plt.hist(benign_rvis, 100, label='benign')
-    plt.hist(path_rvis, 100, label='pathogenic')
-    plt.ylabel('RVIS score frequency')
-    plt.xlabel('RVIS score')
-    plt.legend()
-    plt.title('hist of rvis csore')
-    plt.show()
+    feature2 = add_oe_scores(variants, oe)
+    #plot_hist(feature2)
 
-    #print("train benign and path", np.shape(train[(np.where(train[:,-1] == '0')), -1])[1], np.shape(train[(np.where(train[:,-1] == '1')), -1])[1])
 
 if __name__ == '__main__':
 	main()
