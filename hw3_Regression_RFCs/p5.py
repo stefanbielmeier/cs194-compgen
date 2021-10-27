@@ -43,16 +43,44 @@ def filter_clinVar(vcffile_path):
                             table_form.append(0)
                             num_benign += 1
                             variants.append(table_form)
+         
+    return num_benign, num_pathogenic, np.array(variants)
 
-        filtered_variants = np.array(variants)
 
-    return num_benign, num_pathogenic, filtered_variants
+def random_split(matrix, train_size):
 
+    """
+    Takes matrix, and train_size as decimal value between [0,1]
+
+    Randomly splits the number of rows in a matrix into a training matrix that is train_size of the rows, 
+    and a validation set of (1- train_size) of the rows
+
+    Returns training and validation matrices
+    """
+    
+    """ 
+    Tested with 
+    arr = np.arange(10).reshape((5, 2))
+    print(random_split(arr, 0.8))
+    """
+
+    num_rows = matrix.shape[0]
+    permutation = np.random.permutation(num_rows)
+    train_idxs = permutation[: int(train_size * num_rows)]
+    test_idxs = permutation[int(train_size * num_rows): num_rows]
+    
+    return matrix[train_idxs, :], matrix[test_idxs, :]
 
 def main():
 
     num_benign, num_pathg, variants = filter_clinVar('clinvar_missense.vcf')
     print(num_benign, num_pathg)
+
+    train, val = random_split(variants, 0.8)
+
+    print("val benign and path", np.shape(val[(np.where(val[:,-1] == '0')), -1])[1], np.shape(val[(np.where(val[:,-1] == '1')), -1])[1])
+    print("train benign and path", np.shape(train[(np.where(train[:,-1] == '0')), -1])[1], np.shape(train[(np.where(train[:,-1] == '1')), -1])[1])
+    
 
 if __name__ == '__main__':
 	main()
