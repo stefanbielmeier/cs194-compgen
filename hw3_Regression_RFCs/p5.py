@@ -191,8 +191,9 @@ def main():
     #get last column of val / train (benign / pathogenic), get True / False Array, get values of val / train's last column that matching T/F array, get those dimensions!
     #print("val benign and path", np.shape(val[(np.where(val[:,-1] == '0')), -1])[1], np.shape(val[(np.where(val[:,-1] == '1')), -1])[1])
     #print("train benign and path", np.shape(train[(np.where(train[:,-1] == '0')), -1])[1], np.shape(train[(np.where(train[:,-1] == '1')), -1])[1])
-    #rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
-    #feature1 = add_rvis_scores(variants, rvis)
+    
+    rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
+    feature1 = add_rvis_scores(variants, rvis)
     
     #plot_hist(feature1)
 
