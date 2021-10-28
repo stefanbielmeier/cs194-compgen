@@ -110,14 +110,19 @@ def add_rvis_scores(variants, rvis):
                 if subinfo[1] in rvis:
                     scores[i] = rvis[subinfo[1]]
                 
-                #GENES=BRCA2, BRCA1
-                #case 3: for variants with multiple RVIS gene matches: take the average of the RVIS scores (doesn't happen or I misunderstood)
-                #maybe TODO: normalize by variant count, if multiple variants are associated with the same gene
+                #case 2: for variants with multiple RVIS gene matches: take the average of the RVIS scores (doesn't happen or I misunderstood)
+                #GENES=BRCA2, BRCA1: take score, divide by 2
+                #TODO
+                
+                #case 3 no RVIS score
+                else: 
+                    #
+                    scores[i] = 50
             
-            #case 1: for variants without RVIS score (no match): assign percentile of 50
+            #case 3: for variants without RVIS score (no match): assign percentile of 50
             else:
                 scores[i] = 50
-    print(scores)
+    
     return np.hstack((variants, scores.reshape((-1,1))))
 
 def plot_hist(feature_matrix):
@@ -154,12 +159,7 @@ def get_oe(filepath):
                 try:
                     #value is number, not N/A
                     value = float(info[34])
-
                 except ValueError:
-                    # how to handle missing data?
-                    # assign middle rank
-                    
-                    #GENES=BRCA2, BRCA1
                     value = info[34]
                 dict[info[0]] = value
     
@@ -176,12 +176,22 @@ def add_oe_scores(variants, oe):
         info = variants[i, 7].split(';')
         for index in range(len(info)):
             subinfo = info[index].split("=")
+            #every variant probably has a GENE score
             if subinfo[0] == "GENES":
-                #case 2: for variants with one RVIS score (direct match)
+                #case 1: for variants with one GENE (direct match)
                 if subinfo[1] in oe:
-                    scores[i] = oe[subinfo[1]]
-                #case 3: for variants with multiple RVIS gene matches: take the average of the RVIS scores (doesn't happen or I misunderstood)
-                #maybe TODO: normalize by variant count, if multiple variants are associated with the same gene
+                    if oe[subinfo[1]] == 'NA':
+                        scores[i] = 0
+                    else: 
+                        scores[i] = oe[subinfo[1]]
+                
+                #case 2: for variants with multiple RVIS gene matches: take the average of the RVIS scores (doesn't happen or I misunderstood)
+                #GENES=BRCA2, BRCA1: take score, divide by 2
+                #TODO
+
+                else: 
+                    #
+                    scores[i] = 0
             
             #case 1: for variants without RVIS score (no match): assign half-value of 50
             else:
@@ -217,18 +227,21 @@ def main():
     #print("val benign and path", np.shape(val[(np.where(val[:,-1] == '0')), -1])[1], np.shape(val[(np.where(val[:,-1] == '1')), -1])[1])
     #print("train benign and path", np.shape(train[(np.where(train[:,-1] == '0')), -1])[1], np.shape(train[(np.where(train[:,-1] == '1')), -1])[1])
     
-    #rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
-    #feature1 = add_rvis_scores(variants, rvis)
+    rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
+    feature1 = add_rvis_scores(variants, rvis)
     
     #plot_hist(feature1)
 
-    #oe = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
+    oe = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
 
-    #feature2 = add_oe_scores(variants, oe)
+    feature2 = add_oe_scores(variants, oe)
     #plot_hist(feature2)
     #print(variants[20000:20010, :])
     phast_cons = add_phast_cons(variants, "hg38.phastCons100way.bw")
-    #feature3 = np.hstack((variants, phast_cons))
+    feature3 = np.hstack((variants, phast_cons))
+
+    dataset = np.hstack((feature1[:,-1].reshape((-1,1)), feature2[:,-1].reshape((-1,1)), feature3[:,-1].reshape((-1,1)), feature1[:,-2].reshape((-1,1))))
+    np.savetxt('dataset.csv', dataset)
 
 if __name__ == '__main__':
 	main()
