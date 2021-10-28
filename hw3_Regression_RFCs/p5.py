@@ -240,8 +240,8 @@ def main():
     phast_cons = add_phast_cons(variants, "hg38.phastCons100way.bw")
     feature3 = np.hstack((variants, phast_cons))
 
-    dataset = np.hstack((feature1[:,-1].reshape((-1,1)), feature2[:,-1].reshape((-1,1)), feature3[:,-1].reshape((-1,1)), feature1[:,-2].reshape((-1,1))))
-    np.savetxt('dataset.csv', dataset)
+    dataset = np.hstack((feature1[:,-1].reshape((-1,1)), feature2[:,-1].reshape((-1,1)), feature3[:,-1].reshape((-1,1)), feature1[:,-2].reshape((-1,1)).astype(int))).astype(str)
+    np.savetxt('dataset.csv', dataset, fmt="%s", delimiter=",")
 
 if __name__ == '__main__':
 	main()
