@@ -10,6 +10,7 @@ from os import path
 import numpy as np
 from sklearn.svm import SVC
 import matplotlib.pyplot as plt
+import pyBigWig
 
 
 #4 https://hgdownload.cse.ucsc.edu/goldenPath/hg38/phastCons100way/hg38.phastCons100way.bw
@@ -108,6 +109,8 @@ def add_rvis_scores(variants, rvis):
                 #case 2: for variants with one RVIS score (direct match)
                 if subinfo[1] in rvis:
                     scores[i] = rvis[subinfo[1]]
+                
+                #GENES=BRCA2, BRCA1
                 #case 3: for variants with multiple RVIS gene matches: take the average of the RVIS scores (doesn't happen or I misunderstood)
                 #maybe TODO: normalize by variant count, if multiple variants are associated with the same gene
             
@@ -149,9 +152,15 @@ def get_oe(filepath):
                 #position 32: oe_lof_upper_rank
                 
                 try:
-                    value = float(info[32])
+                    #value is number, not N/A
+                    value = float(info[34])
+
                 except ValueError:
-                    value = info[32]
+                    # how to handle missing data?
+                    # assign middle rank
+                    
+                    #GENES=BRCA2, BRCA1
+                    value = info[34]
                 dict[info[0]] = value
     
     return dict
@@ -180,6 +189,22 @@ def add_oe_scores(variants, oe):
     
     return np.hstack((variants, scores.reshape((-1,1))))
 
+def add_phast_cons(variants, filepath):
+    """
+    Takes in: filepath to bigWig file
+    returns: feature (,N) 2D numpy array with probability of a nucleotide being part in a conserved region, given a variant matrix acc. to a VCF file
+    """
+
+    phast_cons = np.zeros(variants.shape[0])
+    bw = pyBigWig.open(filepath)
+
+    #chrom, #pos, #id
+    for row_idx in range(variants.shape[0]):
+        chrom = "chr" + str(variants[row_idx, 0])
+        pos = int(variants[row_idx, 1])
+        phast_cons[row_idx] = bw.values(chrom, pos, pos+1)[0]
+    
+    return phast_cons.reshape((-1,1))
 
 def main():
 
@@ -192,16 +217,18 @@ def main():
     #print("val benign and path", np.shape(val[(np.where(val[:,-1] == '0')), -1])[1], np.shape(val[(np.where(val[:,-1] == '1')), -1])[1])
     #print("train benign and path", np.shape(train[(np.where(train[:,-1] == '0')), -1])[1], np.shape(train[(np.where(train[:,-1] == '1')), -1])[1])
     
-    rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
-    feature1 = add_rvis_scores(variants, rvis)
+    #rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
+    #feature1 = add_rvis_scores(variants, rvis)
     
     #plot_hist(feature1)
 
-    oe = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
+    #oe = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
 
-    feature2 = add_oe_scores(variants, oe)
+    #feature2 = add_oe_scores(variants, oe)
     #plot_hist(feature2)
-
+    #print(variants[20000:20010, :])
+    phast_cons = add_phast_cons(variants, "hg38.phastCons100way.bw")
+    #feature3 = np.hstack((variants, phast_cons))
 
 if __name__ == '__main__':
 	main()
