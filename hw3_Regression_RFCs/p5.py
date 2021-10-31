@@ -11,6 +11,7 @@ import numpy as np
 from sklearn.svm import SVC
 import matplotlib.pyplot as plt
 import pyBigWig
+from rf_pred import predict
 
 
 #4 https://hgdownload.cse.ucsc.edu/goldenPath/hg38/phastCons100way/hg38.phastCons100way.bw
@@ -216,32 +217,38 @@ def add_phast_cons(variants, filepath):
     
     return phast_cons.reshape((-1,1))
 
+def plot_test_roc(val):
+    
+    pass
+
 def main():
 
     num_benign, num_pathg, variants = filter_clinVar('clinvar_missense.vcf')
     #print("Number of benign and pathogenic variants in ClinVar", num_benign, num_pathg)
-    
-    #train, val = random_split(variants, 0.8)
 
     #get last column of val / train (benign / pathogenic), get True / False Array, get values of val / train's last column that matching T/F array, get those dimensions!
     #print("val benign and path", np.shape(val[(np.where(val[:,-1] == '0')), -1])[1], np.shape(val[(np.where(val[:,-1] == '1')), -1])[1])
     #print("train benign and path", np.shape(train[(np.where(train[:,-1] == '0')), -1])[1], np.shape(train[(np.where(train[:,-1] == '1')), -1])[1])
     
-    rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
-    feature1 = add_rvis_scores(variants, rvis)
+    #rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
+    #feature1 = add_rvis_scores(variants, rvis)
     
     #plot_hist(feature1)
 
-    oe = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
+    #oe = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
 
-    feature2 = add_oe_scores(variants, oe)
+    #feature2 = add_oe_scores(variants, oe)
     #plot_hist(feature2)
     #print(variants[20000:20010, :])
-    phast_cons = add_phast_cons(variants, "hg38.phastCons100way.bw")
-    feature3 = np.hstack((variants, phast_cons))
+    #phast_cons = add_phast_cons(variants, "hg38.phastCons100way.bw")
+    #feature3 = np.hstack((variants, phast_cons))
 
-    dataset = np.hstack((feature1[:,-1].reshape((-1,1)), feature2[:,-1].reshape((-1,1)), feature3[:,-1].reshape((-1,1)), feature1[:,-2].reshape((-1,1)).astype(int))).astype(str)
-    np.savetxt('dataset.csv', dataset, fmt="%s", delimiter=",")
+    dataset = np.hstack((feature1[:,-1].reshape((-1,1)), feature2[:,-1].reshape((-1,1)), feature3[:,-1].reshape((-1,1)), feature1[:,-2].reshape((-1,1)))).astype(str)
+    #np.savetxt('dataset.csv', dataset, fmt="%s", delimiter=",")
+
+    _, val = random_split(dataset, 0.8)
+
+    predict()
 
 if __name__ == '__main__':
 	main()
