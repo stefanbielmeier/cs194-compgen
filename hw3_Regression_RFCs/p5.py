@@ -8,11 +8,12 @@ Model will be trained on variants from ClinVar, a publicly accessible database o
 
 from os import path
 import numpy as np
-from sklearn.svm import SVC
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 import pyBigWig
-from rf_pred import predict
+
+#Random forest model built with brainome
+from rf_model import predict
 
 
 #4 https://hgdownload.cse.ucsc.edu/goldenPath/hg38/phastCons100way/hg38.phastCons100way.bw
@@ -249,22 +250,27 @@ def add_phast_cons(variants, filepath):
     return phast_cons.reshape((-1,1))
 
 def plot_roc(val):
-    
-    probs = predict(val[:,0:3], return_probabilities=True)[1:,1]
-    
-    lw = 2
+
+    features = val[:,0:-1].astype(float)
+    y_true = val[:,-1].astype(int)
+
+    probs = predict(features, remap=False, return_probabilities=True)
+    pos_probs = probs[:,1]
+
     plt.figure()
-    fpr, tpr, _ = roc_curve(val[:,-1], probs)
+    lw = 2
+
+    fpr, tpr, _ = roc_curve(y_true, pos_probs)
     auc_score = auc(fpr, tpr)
-    plt.plot(fpr, tpr,
-			lw=lw, label='ROC curve for random forest' + '(area = %.3f)' % auc_score)
+    plt.plot(fpr, tpr, lw = lw,
+			label='ROC curve for random forest' + '(area = %.3f)' % auc_score)
 
     plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('Receiver operating characteristic curves for our classifiers')
+    plt.title('ROC for Random Forest Class at 20 percent random val data')
     plt.legend(loc="lower right")
     plt.show()
 
@@ -290,12 +296,13 @@ def main():
 
     feature3 = add_phast_cons(variants, "hg38.phastCons100way.bw")
 
-    dataset = np.hstack((feature1, feature2, feature3, variants[:,-1].reshape((-1,1)))).astype(str)
-    np.savetxt('dataset.csv', dataset, fmt="%s", delimiter=",")
+    dataset = np.hstack((feature1, feature2, feature3, variants[:,-1].reshape((-1,1))))
 
-    #_, val = random_split(dataset, 0.8)
+    #np.savetxt('dataset.csv', dataset.astype(str), fmt="%s", delimiter=",")
 
-    #plot_roc(val)
+    _, val = random_split(dataset, 0.8)
+
+    plot_roc(val)
 
 if __name__ == '__main__':
 	main()
