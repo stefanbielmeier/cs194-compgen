@@ -12,7 +12,8 @@ from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 import pyBigWig
 
-#Random forest model built with brainome
+#Random forest model built with brainome (pip install brainome, ran following command: brainome -headerless dataset.csv)
+#importing rf_model classifier that brainome spat out
 from rf_model import predict
 
 
@@ -311,10 +312,8 @@ def problem5_train():
 
     plot_roc(val)
 
-def main():
 
-    #for problems 5a – f), uncomment:
-    #problem5_train()
+def problem5g():
 
     #for problem 5g)
     _ , _, variants = filter_clinVar('test_set.vcf')
@@ -332,7 +331,7 @@ def main():
     feature3 = add_phast_cons(variants, "hg38.phastCons100way.bw")
 
     dataset = np.hstack((feature1, feature2, feature3)).astype(float)
-    print(dataset)
+    
     for idx in range(dataset.shape[0]):
         for jdex in range(dataset.shape[1]):
             if math.isnan(dataset[idx,jdex]) == True:
@@ -340,12 +339,19 @@ def main():
                 print(idx, jdex)
 
     probs = predict(dataset, remap=False, return_probabilities=True)[:,1]
-    print(probs)
-
+    
     with open('test_set.predictions', 'w') as file:
         for prob in probs:
             file.write(str(prob))
             file.write('\n')
 
+
+def main():
+
+    #for problems 5a – f), uncomment:
+    problem5_train()
+
+    #problem5g()
+   
 if __name__ == '__main__':
 	main()
