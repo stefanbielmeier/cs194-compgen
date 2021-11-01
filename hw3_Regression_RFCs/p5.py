@@ -340,13 +340,12 @@ def main():
                 print(idx, jdex)
 
     probs = predict(dataset, remap=False, return_probabilities=True)[:,1]
+    print(probs)
 
-    with open('test_set.predictions', 'wb'):
-        output = ''
+    with open('test_set.predictions', 'w') as file:
         for prob in probs:
-            output += str(prob) + "\n"
-
-
+            file.write(str(prob))
+            file.write('\n')
 
 if __name__ == '__main__':
 	main()
