@@ -96,45 +96,66 @@ def get_rvis_scores(filepath):
     
     return dict
 
-def add_rvis_scores(variants, rvis):
+def match_rvis_scores(variants, rvis_per_gene, infocol_idx):
     """
-    Takes: variant matrix in VCF format, rvis scores (dict – key (gene) - value(rvis score) pairs)
-    Returns: variant matrix in VCF format with an additional column for each variant that includes the applicable RVIS score
+    Takes: variant matrix in VCF format, rvis scores (dict – key (gene) - value(rvis score) pairs), and an integer for the column number in the
+    matrix that carries the info
+
+    Returns: 2D numpy array of format (,N) with the applicable RVIS score in the same order as the variants input 
     """
     scores = np.zeros((variants.shape[0]))
 
     for i in range(variants.shape[0]):
-        info = variants[i, 7].split(';')
+        info = variants[i, infocol_idx].split(';')
         for index in range(len(info)):
             subinfo = info[index].split("=")
             if subinfo[0] == "GENES":
-                #case 2: for variants with one RVIS score (direct match)
-                if subinfo[1] in rvis:
-                    scores[i] = rvis[subinfo[1]]
+                #case 1: for variants with one gene (direct match with RVIS dict)
+                if subinfo[1] in rvis_per_gene:
+                    scores[i] = rvis_per_gene[subinfo[1]]
                 
-                #case 2: for variants with multiple RVIS gene matches: take the average of the RVIS scores (doesn't happen or I misunderstood)
+                #case 2: for variants with multiple genes: take the average of the RVIS scores
                 #GENES=BRCA2, BRCA1: take score, divide by 2
-                #TODO
-                
-                #case 3 no RVIS score
+                #if score is 0 (genes not found in dict, assign 50)
+                elif "," in subinfo[1]:
+                    genes = subinfo[1].split(",")
+                    sum = 0
+                    for gene in genes:
+                        if gene in rvis_per_gene:
+                            sum += float(rvis_per_gene[gene])
+                    #no match for multiple variants
+                    if sum == 0:
+                        scores[i] = 50
+                    else:
+                        scores[i] = sum / len(genes)
+
+                #case 3 no RVIS score for single gene
                 else: 
-                    #
                     scores[i] = 50
             
-            #case 3: for variants without RVIS score (no match): assign percentile of 50
+            #case 4: variant doesn't have gene info
             else:
                 scores[i] = 50
     
-    return np.hstack((variants, scores.reshape((-1,1))))
+    return scores.reshape((-1,1))
 
-def plot_hist(feature_matrix):
+def plot_hist(matrix, y_col, feature):
+    """
+    Takes
+        matrix: the matrix
+        feature: 2D array of shape (N,1) of a feature.
+        y_col: index of column that indicates the results
 
-    y = feature_matrix[:,-2:].astype(float)
-    benign_rvis = np.reshape(y[(np.where(y[:,0] == 0)), 1], (-1,1))
-    path_rvis = np.reshape(y[(np.where(y[:,0] == 1)), 1], (-1,1))
+    Plots hist
+    """
+    feature = feature.astype(float)[:,0]
+    y_values = matrix[:,y_col].astype(int)
 
-    plt.hist(benign_rvis, 100, label='benign')
-    plt.hist(path_rvis, 100, label='pathogenic')
+    benign = feature[(np.where(y_values == 0))]
+    pathogenic = feature[(np.where(y_values == 1))]
+
+    plt.hist(benign, 100, label='benign')
+    plt.hist(pathogenic, 100, label='pathogenic')
     plt.ylabel('score frequency')
     plt.xlabel('score')
     plt.legend()
@@ -149,57 +170,66 @@ def get_oe(filepath):
     returns dict of key value pairs – key is the gene, and value is the o/e score (oe_lof_upper_rank column – 35th column)
     """
 
-    dict = {}
+    oe_dict = {}
 
     with open(filepath) as file:
         for line in file:
             if line[0:4] != "gene":
                 info = line.rstrip().split('\n')[0].split("\t")
                 #position 0: gene
-                #position 32: oe_lof_upper_rank
+                #position 34: oe_lof_upper_rank
                 
                 try:
                     #value is number, not N/A
                     value = float(info[34])
+                #if value is NA, don't add anything
                 except ValueError:
-                    value = info[34]
-                dict[info[0]] = value
-    
-    return dict
+                    continue
+                oe_dict[info[0]] = value
 
-def add_oe_scores(variants, oe):
+    return oe_dict
+
+def match_oe_scores(variants, oe, infocol_idx):
     """
     Takes: variant matrix in VCF format, oe scores (dict – key (gene) - value(oe score) pairs)
     Returns: variant matrix in VCF format with an additional column for each variant that includes the applicable RVIS score
     """
     scores = np.zeros((variants.shape[0]))
+    middle_rank = (min(oe.values()) + max(oe.values())) / 2
 
     for i in range(variants.shape[0]):
-        info = variants[i, 7].split(';')
+        info = variants[i, infocol_idx].split(';')
         for index in range(len(info)):
             subinfo = info[index].split("=")
             #every variant probably has a GENE score
             if subinfo[0] == "GENES":
-                #case 1: for variants with one GENE (direct match)
+                #case 1: for variants with one GENE that has a direct match with the RVIS_dict
                 if subinfo[1] in oe:
-                    if oe[subinfo[1]] == 'NA':
-                        scores[i] = 0
-                    else: 
-                        scores[i] = oe[subinfo[1]]
+                    scores[i] = oe[subinfo[1]]
                 
-                #case 2: for variants with multiple RVIS gene matches: take the average of the RVIS scores (doesn't happen or I misunderstood)
+                #case 2: for variants with multiple GENES matches: take the average of the OE
                 #GENES=BRCA2, BRCA1: take score, divide by 2
-                #TODO
+                elif "," in subinfo[1]:
+                    genes = subinfo[1].split(",")
+                    sum = 0
+                    for gene in genes:
+                        if gene in oe:
+                            sum += oe[gene]
+                    #no match for multiple variants
+                    if sum == 0:
+                        scores[i] = middle_rank
+                    else:
+                        scores[i] = sum / len(genes)
 
+                #case 3 no OE score for single gene
                 else: 
-                    #
-                    scores[i] = 0
+                    scores[i] = middle_rank
             
-            #case 1: for variants without RVIS score (no match): assign half-value of 50
+            #case 4: variant doesn't have gene info
             else:
-                scores[i] = 0
+                scores[i] = middle_rank
     
-    return np.hstack((variants, scores.reshape((-1,1))))
+    return scores.reshape((-1,1))
 
 def add_phast_cons(variants, filepath):
     """
@@ -249,24 +279,24 @@ def main():
     #print("train benign and path", np.shape(train[(np.where(train[:,-1] == '0')), -1])[1], np.shape(train[(np.where(train[:,-1] == '1')), -1])[1])
     
     rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
-    feature1 = add_rvis_scores(variants, rvis)
+    feature1 = match_rvis_scores(variants, rvis, infocol_idx = 7)
     
-    #plot_hist(feature1)
+    #plot_hist(variants, feature = feature1, y_col=-1)
 
-    oe = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
+    oe_dict = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
 
-    feature2 = add_oe_scores(variants, oe)
-    #plot_hist(feature2)
-    #print(variants[20000:20010, :])
+    feature2 = match_oe_scores(variants, oe_dict, infocol_idx = 7)
+    #plot_hist(variants, feature = feature2, y_col=-1)
+
     phast_cons = add_phast_cons(variants, "hg38.phastCons100way.bw")
     feature3 = np.hstack((variants, phast_cons))
 
-    dataset = np.hstack((feature1[:,-1].reshape((-1,1)), feature2[:,-1].reshape((-1,1)), feature3[:,-1].reshape((-1,1)), feature1[:,-2].reshape((-1,1)))).astype(str)
-    #np.savetxt('dataset.csv', dataset, fmt="%s", delimiter=",")
+    dataset = np.hstack((feature1, feature2, feature3, variants[:,-1])).astype(str)
+    np.savetxt('dataset.csv', dataset, fmt="%s", delimiter=",")
 
-    _, val = random_split(dataset, 0.8)
+    #_, val = random_split(dataset, 0.8)
 
-    plot_roc(val)
+    #plot_roc(val)
 
 if __name__ == '__main__':
 	main()
