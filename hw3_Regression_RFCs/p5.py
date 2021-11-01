@@ -288,10 +288,9 @@ def main():
     feature2 = match_oe_scores(variants, oe_dict, infocol_idx = 7)
     #plot_hist(variants, feature = feature2, y_col=-1)
 
-    phast_cons = add_phast_cons(variants, "hg38.phastCons100way.bw")
-    feature3 = np.hstack((variants, phast_cons))
+    feature3 = add_phast_cons(variants, "hg38.phastCons100way.bw")
 
-    dataset = np.hstack((feature1, feature2, feature3, variants[:,-1])).astype(str)
+    dataset = np.hstack((feature1, feature2, feature3, variants[:,-1].reshape((-1,1)))).astype(str)
     np.savetxt('dataset.csv', dataset, fmt="%s", delimiter=",")
 
     #_, val = random_split(dataset, 0.8)
