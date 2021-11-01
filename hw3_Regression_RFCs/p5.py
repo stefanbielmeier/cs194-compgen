@@ -5,7 +5,7 @@ Problem 5: Training a variant effect predictor
 Training a machine learning algorithm to predict the pathogenicity of missense.
 Model will be trained on variants from ClinVar, a publicly accessible database of human variants and their associated phenotypes.
 """
-
+import math
 from os import path
 import numpy as np
 from sklearn.metrics import roc_curve, auc
@@ -37,19 +37,19 @@ def filter_clinVar(filepath):
             if (line[0] != "#"):
                 variant = line.rstrip().split('\n')[0]
                 table_form = variant.split("\t")
-                info = table_form[7].split(';')
+                info = table_form[7].split(";")
                 for index in range(len(info)):
                     subinfo = info[index].split("=")
                     if subinfo[0] == "CLNSIG":
                         if subinfo[1] == "Pathogenic":
                             table_form.append(1)
                             num_pathogenic += 1
-                            variants.append(table_form)
                         elif subinfo[1] == "Benign":
                             table_form.append(0)
                             num_benign += 1
-                            variants.append(table_form)
          
+                variants.append(table_form)
+
     return num_benign, num_pathogenic, np.array(variants)
 
 
@@ -245,7 +245,13 @@ def add_phast_cons(variants, filepath):
     for row_idx in range(variants.shape[0]):
         chrom = "chr" + str(variants[row_idx, 0])
         pos = int(variants[row_idx, 1])
-        phast_cons[row_idx] = bw.values(chrom, pos, pos+1)[0]
+        if math.isnan(bw.values(chrom, pos, pos+1)[0]):
+            print(chrom, pos)
+            #22	18939695	.	G	A	.	.	GENES=AC007326.4
+            # we don't know the probability..., not in bigwig
+            phast_cons[row_idx] = 0.5
+        else:
+            phast_cons[row_idx] = bw.values(chrom, pos, pos+1)[0]
     
     return phast_cons.reshape((-1,1))
 
@@ -275,14 +281,15 @@ def plot_roc(val):
     plt.show()
 
 
-def main():
+def problem5_train():
 
     num_benign, num_pathg, variants = filter_clinVar('clinvar_missense.vcf')
     #print("Number of benign and pathogenic variants in ClinVar", num_benign, num_pathg)
 
+    variants_train, variants_val = random_split(variants, 0.8)
     #get last column of val / train (benign / pathogenic), get True / False Array, get values of val / train's last column that matching T/F array, get those dimensions!
-    #print("val benign and path", np.shape(val[(np.where(val[:,-1] == '0')), -1])[1], np.shape(val[(np.where(val[:,-1] == '1')), -1])[1])
-    #print("train benign and path", np.shape(train[(np.where(train[:,-1] == '0')), -1])[1], np.shape(train[(np.where(train[:,-1] == '1')), -1])[1])
+    print("val benign and path", np.shape(variants_val[(np.where(variants_val[:,-1] == '0')), -1])[1], np.shape(variants_val[(np.where(variants_val[:,-1] == '1')), -1])[1])
+    print("train benign and path", np.shape(variants_train[(np.where(variants_train[:,-1] == '0')), -1])[1], np.shape(variants_train[(np.where(variants_train[:,-1] == '1')), -1])[1])
     
     rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
     feature1 = match_rvis_scores(variants, rvis, infocol_idx = 7)
@@ -298,11 +305,48 @@ def main():
 
     dataset = np.hstack((feature1, feature2, feature3, variants[:,-1].reshape((-1,1))))
 
-    #np.savetxt('dataset.csv', dataset.astype(str), fmt="%s", delimiter=",")
+    np.savetxt('dataset.csv', dataset.astype(str), fmt="%s", delimiter=",")
 
     _, val = random_split(dataset, 0.8)
 
     plot_roc(val)
+
+def main():
+
+    #for problems 5a – f), uncomment:
+    #problem5_train()
+
+    #for problem 5g)
+    _ , _, variants = filter_clinVar('test_set.vcf')
+
+    rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
+    feature1 = match_rvis_scores(variants, rvis, infocol_idx = 7)
+    
+    #plot_hist(variants, feature = feature1, y_col=-1)
+
+    oe_dict = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
+
+    feature2 = match_oe_scores(variants, oe_dict, infocol_idx = 7)
+    #plot_hist(variants, feature = feature2, y_col=-1)
+
+    feature3 = add_phast_cons(variants, "hg38.phastCons100way.bw")
+
+    dataset = np.hstack((feature1, feature2, feature3)).astype(float)
+    print(dataset)
+    for idx in range(dataset.shape[0]):
+        for jdex in range(dataset.shape[1]):
+            if math.isnan(dataset[idx,jdex]) == True:
+                print(dataset[idx, jdex])
+                print(idx, jdex)
+
+    probs = predict(dataset, remap=False, return_probabilities=True)[:,1]
+
+    with open('test_set.predictions', 'wb'):
+        output = ''
+        for prob in probs:
+            output += str(prob) + "\n"
+
+
 
 if __name__ == '__main__':
 	main()
