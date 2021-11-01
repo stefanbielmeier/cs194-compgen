@@ -9,6 +9,7 @@ Model will be trained on variants from ClinVar, a publicly accessible database o
 from os import path
 import numpy as np
 from sklearn.svm import SVC
+from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 import pyBigWig
 from rf_pred import predict
@@ -217,9 +218,26 @@ def add_phast_cons(variants, filepath):
     
     return phast_cons.reshape((-1,1))
 
-def plot_test_roc(val):
+def plot_roc(val):
     
-    pass
+    probs = predict(val[:,0:3], return_probabilities=True)[1:,1]
+    
+    lw = 2
+    plt.figure()
+    fpr, tpr, _ = roc_curve(val[:,-1], probs)
+    auc_score = auc(fpr, tpr)
+    plt.plot(fpr, tpr,
+			lw=lw, label='ROC curve for random forest' + '(area = %.3f)' % auc_score)
+
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic curves for our classifiers')
+    plt.legend(loc="lower right")
+    plt.show()
+
 
 def main():
 
@@ -230,25 +248,25 @@ def main():
     #print("val benign and path", np.shape(val[(np.where(val[:,-1] == '0')), -1])[1], np.shape(val[(np.where(val[:,-1] == '1')), -1])[1])
     #print("train benign and path", np.shape(train[(np.where(train[:,-1] == '0')), -1])[1], np.shape(train[(np.where(train[:,-1] == '1')), -1])[1])
     
-    #rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
-    #feature1 = add_rvis_scores(variants, rvis)
+    rvis = get_rvis_scores("RVIS_Unpublished_ExACv2_March2017.txt")
+    feature1 = add_rvis_scores(variants, rvis)
     
     #plot_hist(feature1)
 
-    #oe = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
+    oe = get_oe('gnomad.v2.1.1.lof_metrics.by_gene.txt')
 
-    #feature2 = add_oe_scores(variants, oe)
+    feature2 = add_oe_scores(variants, oe)
     #plot_hist(feature2)
     #print(variants[20000:20010, :])
-    #phast_cons = add_phast_cons(variants, "hg38.phastCons100way.bw")
-    #feature3 = np.hstack((variants, phast_cons))
+    phast_cons = add_phast_cons(variants, "hg38.phastCons100way.bw")
+    feature3 = np.hstack((variants, phast_cons))
 
     dataset = np.hstack((feature1[:,-1].reshape((-1,1)), feature2[:,-1].reshape((-1,1)), feature3[:,-1].reshape((-1,1)), feature1[:,-2].reshape((-1,1)))).astype(str)
     #np.savetxt('dataset.csv', dataset, fmt="%s", delimiter=",")
 
     _, val = random_split(dataset, 0.8)
 
-    predict()
+    plot_roc(val)
 
 if __name__ == '__main__':
 	main()
